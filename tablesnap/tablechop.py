@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Cleans SSTables on S3 """
 import eventlet
 eventlet.monkey_patch()
@@ -128,7 +126,17 @@ def get_file_list(args, bucket, index_file):
     return ["%s:%s" % (args.name, os.path.join(dirname, filename)) for filename in index.values()[0]]
 
 
-def main(log):
+def main():
+    log = logging.getLogger('tablechop')
+    stderr = logging.StreamHandler()
+    stderr.setFormatter(logging.Formatter(
+        '%(name)s [%(asctime)s] %(levelname)s %(message)s'))
+    log.addHandler(stderr)
+    if os.environ.get('TDEBUG', False):
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
+
     parser = argparse.ArgumentParser(
         description='Clean SSTables from S3. Scroll backwards through '
         '-listdir.json keys in chronological order collecting a "keeper" '
@@ -190,17 +198,3 @@ def main(log):
         help='How many days worth of backups to keep')
     args = parser.parse_args()
     clean_backups(args, log)
-
-if __name__ == '__main__':
-
-    log = logging.getLogger('tablechop')
-    stderr = logging.StreamHandler()
-    stderr.setFormatter(logging.Formatter(
-        '%(name)s [%(asctime)s] %(levelname)s %(message)s'))
-    log.addHandler(stderr)
-    if os.environ.get('TDEBUG', False):
-        log.setLevel(logging.DEBUG)
-    else:
-        log.setLevel(logging.INFO)
-
-    main(log)

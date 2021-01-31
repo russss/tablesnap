@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import pyinotify
 import boto
 
@@ -594,6 +593,3 @@ def main():
         backup_files(handler, args.paths, args.recursive, include)
 
     notifier.loop()
-
-if __name__ == '__main__':
-    sys.exit(main())

@@ -9,11 +9,14 @@ setup(
     author='Jeremy Grosser',
     author_email='jeremy@synack.me',
     url='https://github.com/JeremyGrosser/tablesnap',
-    scripts=[
-        'tablesnap',
-        'tableslurp',
-        'tablechop'
-    ],
+    entry_points={
+        'console_scripts': [
+            'tablesnap=tablesnap.tablesnap:main',
+            'tablechop=tablechop.tablechop:main',
+            'tableslurp=tableslurp.tableslurp:main'
+        ]
+    },
+    packages=['tablesnap'],
     install_requires=[
         'pyinotify',
         'boto>=2.6.0',
