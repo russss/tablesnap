@@ -25,7 +25,6 @@ import threading
 import os
 import pwd
 import socket
-import sys
 from queue import Queue
 import re
 from datetime import datetime
@@ -40,7 +39,8 @@ if os.environ.get('TDEBUG', False):
 else:
     log.setLevel(logging.INFO)
 
-clog_regex = re.compile('CommitLog-\d-(\d+).log')
+
+clog_regex = re.compile(r'CommitLog-\d-(\d+).log')
 
 
 def parse_clog(clog):
@@ -48,7 +48,7 @@ def parse_clog(clog):
 
 
 def get_bucket(region, key, secret, token, bucket_name):
-#   unsure if boto is thread-safe, will reconnect every time
+    # unsure if boto is thread-safe, will reconnect every time
     log.debug('Connecting to s3')
     if token:
         conn = boto.s3.connect_to_region(region,
@@ -67,7 +67,7 @@ def get_bucket(region, key, secret, token, bucket_name):
 
 
 def find_latest_listdirjson_for_every_table(bucket, prefix):
-    latest_listdirjsons={}
+    latest_listdirjsons = {}
     # Get all ks folders, e.g /var/lib/cassandra/<ks>
     keyspace_dirs = [_.name for _ in list(bucket.list(prefix='%s/' % prefix, delimiter='/'))]
 
@@ -78,7 +78,8 @@ def find_latest_listdirjson_for_every_table(bucket, prefix):
         for table_dir in table_dirs:
             # Get all listdir.json files for every tbl folder,
             # e.g /var/lib/cassandra/<ks>/<tbl>/mc-1/2/3/4...-Data.db-listdir.json
-            keys = [_ for _ in bucket.list(prefix=table_dir, delimiter='/') if _.name.endswith('-listdir.json')]
+            keys = [_ for _ in bucket.list(prefix=table_dir, delimiter='/')
+                    if _.name.endswith('-listdir.json')]
 
             if keys:
                 keys.sort(key=lambda l: parser.parse(l.last_modified))
@@ -103,7 +104,7 @@ def build_recursive_fileset(bucket, prefix):
 
 
 def build_clog_fileset(bucket, prefix, clog_prefix):
-    fileset=[]
+    fileset = []
     table_to_latest_listdirjson_mapping = find_latest_listdirjson_for_every_table(bucket, prefix)
     listdirjsons = table_to_latest_listdirjson_mapping.values()
     listdirjsons.sort(key=lambda l: parser.parse(l.last_modified), reverse=True)
@@ -189,7 +190,7 @@ class DownloadHandler(object):
         if args.name:
             self.name = args.name
         self.prefix = prefix
-        self.fileset=fileset
+        self.fileset = fileset
 
 #       It may be a bit sub-optimal, but I rather fail sooner than later
         (owner, group) = self._check_metadata()
@@ -203,8 +204,7 @@ class DownloadHandler(object):
             self.group = grp.getgrnam(group).gr_gid
         except Exception as e:
             log.error(e)
-            raise OSError('User/Group pair %s:%s does not exist' %
-                (owner, group,))
+            raise OSError('User/Group pair %s:%s does not exist' % (owner, group))
 
     def _get_bucket(self):
         return get_bucket(self.region, self.key, self.secret, self.token, self.bucket_name)
@@ -262,7 +262,7 @@ class DownloadHandler(object):
         log.info('Thread #%d processing items' % (idx, ))
         bucket = self._get_bucket()
 
-        while queue.empty() == False:
+        while not queue.empty():
             queueddownload = queue.get()
             fname = queueddownload.filename
             keypath = '%s/%s' % (self.prefix, fname,)
@@ -273,7 +273,7 @@ class DownloadHandler(object):
 
             if queueddownload.attemptcount < 5:
                 download = False
-                #Retry downloading until we succeed
+                # Retry downloading until we succeed
                 try:
                     key = bucket.get_key(keypath)
                     log.debug('Key object is %s' % key)
@@ -397,11 +397,11 @@ def main():
         help='Path in the local FS where files should be downloaded to')
     args = ap.parse_args()
 
-    prefix='%s:%s' % (args.name, args.origin[0])
-    bucket=get_bucket(args.aws_region, args.aws_key, args.aws_secret, args.token, args.bucket[0])
+    prefix = '%s:%s' % (args.name, args.origin[0])
+    bucket = get_bucket(args.aws_region, args.aws_key, args.aws_secret, args.token, args.bucket[0])
     log.info('Building fileset')
     if args.recursive:
-        table_to_files_mapping=build_recursive_fileset(bucket, prefix)
+        table_to_files_mapping = build_recursive_fileset(bucket, prefix)
         for table,fileset in table_to_files_mapping.iteritems():
             dh = DownloadHandler(args, target=os.path.join(args.target[0], table),
                                  prefix=os.path.join(prefix, table), fileset=fileset)
@@ -413,7 +413,7 @@ def main():
                              fileset=fileset)
         dh.run()
     else:
-        fileset=build_single_fileset(bucket, prefix, args.origin[0], args.file)
+        fileset = build_single_fileset(bucket, prefix, args.origin[0], args.file)
         dh = DownloadHandler(args, target=args.target[0], prefix=prefix,
                              fileset=fileset)
         dh.run()

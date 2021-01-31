@@ -1,7 +1,6 @@
 """ Cleans SSTables on S3 """
 import eventlet
 eventlet.monkey_patch()
-
 import argparse
 import boto
 import json
@@ -16,6 +15,7 @@ from datetime import datetime
 from dateutil import parser as dtparser
 
 now = None
+
 
 def days_ago(tstamp):
     global now

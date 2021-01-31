@@ -1,6 +1,5 @@
 import pyinotify
 import boto
-
 import argparse
 from traceback import format_exc
 from threading import Thread
@@ -10,7 +9,6 @@ import logging.handlers
 import os.path
 import socket
 import json
-import sys
 import os
 import pwd
 import grp
@@ -50,6 +48,7 @@ default_chunk_size = 256
 
 # Default inotify event to listen on
 default_listen_events = ['IN_MOVED_TO', 'IN_CLOSE_WRITE']
+
 
 class UploadHandler(pyinotify.ProcessEvent):
     def my_init(self, threads=None, key=None, secret=None, token=None, region=None,
@@ -134,7 +133,7 @@ class UploadHandler(pyinotify.ProcessEvent):
             keyname = self.build_keyname(f)
             try:
                 self.upload_sstable(bucket, keyname, f)
-            except:
+            except Exception:
                 self.log.critical("Failed uploading %s. Aborting.\n%s" %
                              (f, format_exc()))
                 # Brute force kill self
@@ -156,6 +155,7 @@ class UploadHandler(pyinotify.ProcessEvent):
             # handler unless explicitly listened for (via the
             # --listen-events) argument.
             self.add_file(event.pathname)
+
     #
     # Check if this keyname (ie, file) has already been uploaded to
     # the S3 bucket. This will verify that not only does the keyname
@@ -167,17 +167,17 @@ class UploadHandler(pyinotify.ProcessEvent):
         for r in range(self.retries):
             try:
                 key = bucket.get_key(keyname)
-                if key == None:
+                if key is None:
                     self.log.debug('Key %s does not exist' % (keyname,))
                     return False
                 else:
                     self.log.debug('Found key %s' % (keyname,))
                     break
-            except:
+            except Exception:
                 bucket = self.get_bucket()
                 continue
 
-        if key == None:
+        if key is None:
             self.log.critical("Failed to lookup keyname %s after %d"
                               " retries\n%s" %
                              (keyname, self.retries, format_exc()))
@@ -329,7 +329,7 @@ class UploadHandler(pyinotify.ProcessEvent):
                             reduced_redundancy=self.reduced_redundancy,
                             encrypt_key=self.with_sse)
                         break
-                    except:
+                    except Exception:
                         if r == self.retries - 1:
                             self.log.critical("Failed to upload directory "
                                               "listing.")
@@ -343,13 +343,13 @@ class UploadHandler(pyinotify.ProcessEvent):
             try:
                 u = pwd.getpwuid(stat.st_uid)
                 meta['user'] = u.pw_name
-            except:
+            except Exception:
                 pass
 
             try:
                 g = grp.getgrgid(stat.st_gid)
                 meta['group'] = g.gr_name
-            except:
+            except Exception:
                 pass
 
             self.log.info('Uploading %s' % filename)
@@ -403,7 +403,7 @@ class UploadHandler(pyinotify.ProcessEvent):
                                                        encrypt_key=self.with_sse)
                         delete_if_enabled()
                     break
-                except:
+                except Exception:
                     if not os.path.exists(filename):
                         # File was removed? Skip
                         return
@@ -413,9 +413,10 @@ class UploadHandler(pyinotify.ProcessEvent):
                         raise
                     bucket = self.get_bucket()
                     continue
-        except:
+        except Exception:
             self.log.error('Error uploading %s\n%s' % (keyname, format_exc()))
             raise
+
 
 def get_mask(listen_events):
     if not listen_events:
