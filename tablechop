@@ -36,7 +36,7 @@ def get_bucket(args):
                                            aws_secret_access_key=args.secret,
                                            security_token=args.token)
         return s3conn.get_bucket(args.bucket)
-    except boto.exception.BotoServerError, e:
+    except boto.exception.BotoServerError as e:
         log.error('Problem initializing S3 connection: %s', e)
         sys.exit(1)
 
@@ -53,7 +53,7 @@ def clean_backups(args, log):
 
     try:
         key_list = bucket.list("%s:%s" % (args.name, args.path))
-    except boto.exception.BotoServerError, e:
+    except boto.exception.BotoServerError as e:
         log.error('Problem getting keys from S3 bucket: %s', e)
         sys.exit(1)
 

@@ -5,7 +5,7 @@ import boto
 import argparse
 from traceback import format_exc
 from threading import Thread
-from Queue import Queue
+from queue import Queue
 import logging
 import logging.handlers
 import os.path
@@ -17,7 +17,7 @@ import pwd
 import grp
 import re
 import signal
-import StringIO
+from io import StringIO
 
 default_log = logging.getLogger('tablesnap')
 if os.environ.get('TABLESNAP_SYSLOG', False):
@@ -199,13 +199,13 @@ class UploadHandler(pyinotify.ProcessEvent):
                 # Compute MD5 sum of file
                 try:
                     fp = open(filename, "r")
-                except IOError as (errno, strerror):
-                    if errno == 2:
+                except IOError as err:
+                    if err.errno == 2:
                         # The file was removed, return True to skip this file.
                         return True
 
                     self.log.critical("Failed to open file: %s (%s)\n%s" %
-                                 (filename, strerror, format_exc(),))
+                                 (filename, err.strerror, format_exc(),))
                     raise
 
                 md5 = key.compute_md5(fp)
